@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+env/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Database
+db.sqlite3
+
+# Static and media files (if you collect them in these locations)
+static/
+media/
+
+# Django-specific
+*.log
+*.pot
+*.mo
+local_settings.py  # If you have a local settings file
+*.swp  # Vim swap files
+*~  # Backup files
+
+# OS or Editor related
+.DS_Store
+.vscode/
+*.idea/
+*.iml
+
+# Environment Variables
+.env
