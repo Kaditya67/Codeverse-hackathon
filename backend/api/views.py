@@ -31,12 +31,12 @@ def generatecontent(language, roadmap_requirements):
     return response_dict, 200
 
 def sample_api(request):
-    language = "python"
-    roadmap_requirements = ["Topics to be covered", "Resources", "Self learning projects", "Main Roadmap"]
-    response, status_code = generatecontent(language, roadmap_requirements)
+    # language = "python"
+    # roadmap_requirements = ["Topics to be covered", "Resources", "Self learning projects", "Main Roadmap"]
+    # response, status_code = generatecontent(language, roadmap_requirements)
 
-    if status_code != 200:
-        return JsonResponse(response, status=status_code)
+    # if status_code != 200:
+    #     return JsonResponse(response, status=status_code)
 
-    return JsonResponse(response)
-    # return JsonResponse({"message": "Hello from Django!"})
+    # return JsonResponse(response)
+    return JsonResponse({"message": "Hello from Django!"})
