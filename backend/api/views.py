@@ -1,6 +1,38 @@
 from django.http import JsonResponse
 from django.conf import settings
 from google import generativeai
+import json
+
+def seperate(text):
+    
+    new_dict = {}
+    text  = text.replace(" ", "")
+    topic_segregation = text.split("//")
+
+    for topic in topic_segregation:
+
+        temp = topic.split(">")
+        
+        if(len(temp) < 2):
+            continue
+
+        main_topic = temp[0]
+        subtopics = temp[1].split(",")
+
+        new_dict[main_topic] = subtopics
+    
+    return new_dict
+
+def generatefromPrompt(prompt, model, context):
+
+    main_prompt = "No generation of conclusion or introduction by yourself just pure text!! Do not generate any questions for user!! Generate the response in following format: Main Topic > All possible subtopics in format st1, st2,..,sn//.Each main topic should be on the next line" 
+
+    prompt = prompt + ".\n The previous context is: \n" + context
+    try:
+        response = model.generate_content(prompt + "\n" + main_prompt)
+        return response.text
+    except Exception as e:
+        return ""
 
 def generatecontent(language, roadmap_requirements):
 
@@ -12,23 +44,38 @@ def generatecontent(language, roadmap_requirements):
     generativeai.configure(api_key=api_key)
     model = generativeai.GenerativeModel('gemini-2.0-flash')
     response_dict = {}
-    final_responses = []  # Use a list for efficient string joining
+    context = ""
 
     for content in roadmap_requirements:
         print(content)
-        prompt = f"Generate {content} for {language} in points."
-        try:
-            response = model.generate_content(prompt)
-            newresponse = str(response.text).replace("*", "")  # Correct string replacement
-            print(newresponse)
-            print()
-            response_dict[content] = newresponse
-            final_responses.append(newresponse)  # Append to the list
-        except Exception as e:
-            return {"error": f"Gemini API error: {str(e)}"}, 500 #return error if genai fails.
+        prompt = "Generate" + content + "for" + language + "in points"
+        newresponse = generatefromPrompt(prompt, model, context)
 
-    finalresponse = "".join(final_responses)  # Join the list into a single string
-    return response_dict, 200
+        newresponse.replace("*", "")
+
+        if(len(newresponse) > 80):
+            summary_prompt = f"Summarize the following text: {newresponse}" + "in 100 words"
+            summary  = generatefromPrompt(summary_prompt, model, context)
+    
+            if summary:
+                context += ("For "+ content + "summarised contexted response is : " + summary + "\n")
+                newresponse = summary
+            else:        
+                break
+        
+        ndict = seperate(newresponse)
+        response_dict[content] = ndict  
+
+    try:
+        jsonfile = json.dumps(response_dict)
+        #print(jsonfile)
+        #print(type(python_object))
+
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+
+
+    return jsonfile
 
 def sample_api(request):
     # language = "python"
@@ -39,4 +86,11 @@ def sample_api(request):
     #     return JsonResponse(response, status=status_code)
 
     # return JsonResponse(response)
-    return JsonResponse({"message": "Hello from Django!"})
+    language = "python"
+    roadmap_requirements = ["Topics to be covered"]#"Self-Learning Projects", "Resources and Books"]
+
+    Jsonf = generatecontent(language, roadmap_requirements)
+
+    print(Jsonf)
+    #return JsonResponse({"message": "Hello from Django!"})
+    return JsonResponse(Jsonf, safe=False)
