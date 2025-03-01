@@ -1,8 +1,8 @@
-# from .models import Roadmap, Topic
-# import json
+from .models import Roadmap, Topic
+import json
 
-# def refineRoadmap(request):
+def refineRoadmap(request):
 
-#     data = Roadmap.objects.all()
-#     print(data)
-#     pass
+    data = Roadmap.objects.all()
+    print(data)
+    pass
