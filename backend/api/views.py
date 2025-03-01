@@ -3,25 +3,29 @@ from django.conf import settings
 from google import generativeai
 import json
 
-def seperate(text):
-    
+def seperate(text): 
+    print("Text is:", text)
     new_dict = {}
-    text  = text.replace(" ", "")
+
+    # Remove unnecessary newlines and excessive spaces
+    text = text.replace("\n", "").strip()
+
     topic_segregation = text.split("//")
 
     for topic in topic_segregation:
-
         temp = topic.split(">")
-        
-        if(len(temp) < 2):
+
+        if len(temp) < 2:
             continue
 
-        main_topic = temp[0]
-        subtopics = temp[1].split(",")
+        main_topic = temp[0].strip()  # Clean the topic name
+        subtopics = [st.strip() for st in temp[1].split(",")]  # Clean each subtopic
 
+        print(f"Main topic: {main_topic}, Subtopics: {subtopics}")
         new_dict[main_topic] = subtopics
-    
+
     return new_dict
+
 
 def generatefromPrompt(prompt, model, context):
 
