@@ -4,7 +4,7 @@ function App() {
     const [data, setData] = useState(null);
 
     useEffect(() => {
-        fetch("/api/hello/")
+        fetch("/api/chatbot/")
             .then(response => response.json())
             .then(data => {
                 console.log(data);
