@@ -7,6 +7,7 @@ import ReactFlow, {
   Position,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import axios from "axios";
 
 const NODE_CONFIG = {
   parent: {
@@ -26,6 +27,12 @@ const NODE_CONFIG = {
 };
 
 const CustomNode = ({ data }) => {
+  const handleNodeClick = (url) => {
+    if (url) {
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <div
       style={{
@@ -41,7 +48,7 @@ const CustomNode = ({ data }) => {
         fontSize: "0.9rem",
         fontWeight: 500,
       }}
-      onClick={() => data.url && window.open(data.url, "_blank")}
+      onClick={() => handleNodeClick(data.url)}
     >
       {data.label}
 
@@ -117,7 +124,7 @@ const MindMap = () => {
       try {
         const response = await fetch('http://localhost:8000/api/initroadmap');
         if (!response.ok) throw new Error('Network response was not ok');
-        
+        console.log(response);
         const data = await response.json();
         const topics = data["Topics to be covered"];
 
@@ -244,6 +251,7 @@ const MindMap = () => {
 
     fetchDataAndCreateLayout();
   }, []);
+
   const handleLanguageSubmit = async (e) => {
     e.preventDefault();
     if (!language) return;
@@ -252,21 +260,26 @@ const MindMap = () => {
     setError(null);
   
     try {
-      const response = await fetch('http://localhost:8000/api/update-roadmap/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language }),
-      });
+      // Correct axios request structure
+      const response = await axios.post(
+        'http://localhost:8000/api/update-roadmap/',
+        { language },  // Data object
+        {  // Config object
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.cookie.replace(/(?:(?:^|.*;\s*)csrftoken\s*=\s*([^;]*).*$)|^.*$/, '$1'),
+          },
+          withCredentials: true
+        }
+      );
   
-      if (!response.ok) throw new Error('Failed to update roadmap');
-  
-      const data = await response.json();
+      // Process response data
+      const data = response.data;
   
       if (!data["Topics to be covered"]) {
         throw new Error('Missing "Topics to be covered" in response');
       }
   
-      const topics = data["Topics to be covered"];
   
       // Create parent nodes structure
       const parentNodes = Object.keys(topics).map((topicName, index) => ({

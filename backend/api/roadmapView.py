@@ -92,7 +92,7 @@ def update_roadmap(request):
             return JsonResponse({"error": f"Failed to update roadmap: {str(e)}"}, status=500)
 
 # Roadmap generation and database update
-def roadmap(request, language="mulesoft"):
+def roadmap(request, language="django"):
     roadmap_requirements = ["Topics to be covered"]
     topic_limit = 10  # Limit topics but allow unlimited subtopics
 
