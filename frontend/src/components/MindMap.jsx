@@ -27,9 +27,9 @@ const NODE_CONFIG = {
 };
 
 const CustomNode = ({ data }) => {
-  const handleNodeClick = (url) => {
-    if (url) {
-      window.open(url, "_blank");
+  const handleNodeClick = () => {
+    if (data.onClick) {
+      data.onClick(); // This will trigger the modal logic
     }
   };
 
@@ -41,14 +41,18 @@ const CustomNode = ({ data }) => {
         backgroundColor: "#FFD700",
         border: "2px solid #2c3e50",
         textAlign: "center",
-        cursor: data.url ? "pointer" : "default",
         minWidth: `${NODE_CONFIG.parent.width}px`,
         position: "relative",
         boxShadow: "3px 3px 8px rgba(0,0,0,0.15)",
         fontSize: "0.9rem",
         fontWeight: 500,
+        cursor: data.onClick ? "pointer" : "default",
+        transition: "transform 0.2s",
       }}
-      onClick={() => handleNodeClick(data.url)}
+      onClick={handleNodeClick}
+      onMouseOver={(e) => data.onClick && (e.currentTarget.style.transform = "scale(1.05)")}
+      onMouseOut={(e) => data.onClick && (e.currentTarget.style.transform = "scale(1)")}
+      title={data.onClick ? "Click for details" : ""}
     >
       {data.label}
 
@@ -113,9 +117,13 @@ const CustomNode = ({ data }) => {
 const nodeTypes = { custom: CustomNode };
 
 const MindMap = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSubtopic, setSelectedSubtopic] = useState("");
+  const [summaryContent, setSummaryContent] = useState("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
-  const [language, setLanguage] = useState(""); 
+  const [language, setLanguage] = useState("python"); // Default to python 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -141,7 +149,7 @@ const MindMap = () => {
           const parentId = topicName.replace(/\s+/g, '').toLowerCase();
           subtopics[parentId] = topicData["not done"].map(subtopic => ({
             label: subtopic,
-            url: "" // Add URL mapping logic here if needed
+            onClick: () => handleSubtopicClick(subtopic),
           }));
         });
 
@@ -222,7 +230,7 @@ const MindMap = () => {
               },
               data: {
                 label: subtopic.label,
-                url: subtopic.url,
+                onClick: subtopic.onClick,  // Pass click handler
                 side: parent.subtopicSide,
               },
             });
@@ -251,6 +259,37 @@ const MindMap = () => {
 
     fetchDataAndCreateLayout();
   }, []);
+
+  const handleSubtopicClick = async (subtopic) => {
+    // language = "python";
+    if (!language) {
+      setError("Please select a language first");
+      return;
+    }
+
+    setSelectedSubtopic(subtopic);
+    setIsModalOpen(true);
+    setIsLoadingSummary(true);
+    
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/get-summary/",
+        { language, subtopic }
+      );
+      console.log(response.data);
+      
+      const summary = response.data.summary || '';
+      const codeExample = response.data.code_example ? 
+        `<pre><code>${response.data.code_example}</code></pre>` : '';
+      
+      setSummaryContent(`${summary}${codeExample}`);
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+      setSummaryContent("Failed to load content. Please try again.");
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
 
   const handleLanguageSubmit = async (e) => {
     e.preventDefault();
@@ -297,7 +336,7 @@ const MindMap = () => {
         const parentId = topicName.replace(/\s+/g, '').toLowerCase();
         subtopics[parentId] = topicData["not done"].map((subtopic) => ({
           label: subtopic,
-          url: "", // Add URL mapping logic if needed
+          onClick: () => handleSubtopicClick(subtopic),
         }));
       });
   
@@ -334,6 +373,7 @@ const MindMap = () => {
           position: { x: parent.x, y: parent.y },
           data: {
             label: parent.label,
+            onClick: parent.onClick,
             isParent: true,
             subtopicSide: parent.subtopicSide,
           },
@@ -377,7 +417,7 @@ const MindMap = () => {
             position: { x: parent.x + xOffset, y: startY + subIndex * NODE_CONFIG.subtopic.verticalSpacing },
             data: {
               label: subtopic.label,
-              url: subtopic.url,
+              onClick: subtopic.onClick,  // Pass click handler
               side: parent.subtopicSide,
             },
           });
@@ -467,7 +507,7 @@ const MindMap = () => {
           disabled={loading}
           style={{
             padding: "8px 15px",
-            borderRadius: "20px",
+            borderRadius: "20px", 
             backgroundColor: "#3498db",
             color: "white",
             border: "none",
@@ -496,8 +536,78 @@ const MindMap = () => {
           {error}
         </div>
       )}
+
+{isModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: "white",
+            padding: "25px",
+            borderRadius: "12px",
+            maxWidth: "600px",
+            width: "90%",
+            maxHeight: "80vh",
+            overflowY: "auto",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px",
+            }}>
+              <h3 style={{ margin: 0 }}>{selectedSubtopic}</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                  color: "#666",
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            {isLoadingSummary ? (
+              <div style={{ 
+                textAlign: "center", 
+                padding: "40px 20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px"
+              }}>
+                <div className="spinner" />
+                <p>Loading content...</p>
+              </div>
+            ) : (
+              <div 
+                style={{ 
+                  lineHeight: 1.6,
+                  fontFamily: "'Segoe UI', sans-serif",
+                  color: "#333",
+                }}
+                dangerouslySetInnerHTML={{ __html: summaryContent }}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </ReactFlowProvider>
-  );  
+  );
 };
 
 export default MindMap;
