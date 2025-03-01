@@ -8,25 +8,43 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-// Custom Node Component for better readability and reusability
+const NODE_CONFIG = {
+  parent: {
+    width: 200,
+    height: 60,
+    verticalSpacing: 150,
+    horizontalOffset: 300,
+  },
+  subtopic: {
+    verticalSpacing: 70,
+    horizontalOffset: 300,
+  },
+  colors: {
+    parentConnection: "#2c3e50",
+    subtopicConnection: "#e74c3c",
+  },
+};
+
 const CustomNode = ({ data }) => {
   return (
     <div
       style={{
-        padding: "10px",
-        borderRadius: "8px",
+        padding: "12px 20px",
+        borderRadius: "10px",
         backgroundColor: "#FFD700",
-        border: "2px solid black",
+        border: "2px solid #2c3e50",
         textAlign: "center",
         cursor: data.url ? "pointer" : "default",
-        minWidth: "180px",
+        minWidth: `${NODE_CONFIG.parent.width}px`,
         position: "relative",
-        boxShadow: "2px 2px 5px rgba(0,0,0,0.2)",
+        boxShadow: "3px 3px 8px rgba(0,0,0,0.15)",
+        fontSize: "0.9rem",
+        fontWeight: 500,
       }}
       onClick={() => data.url && window.open(data.url, "_blank")}
     >
       {data.label}
-      {/* Parent node handles and their connections */}
+
       {data.isParent ? (
         <>
           <Handle
@@ -37,6 +55,9 @@ const CustomNode = ({ data }) => {
               bottom: "-8px",
               left: "50%",
               transform: "translateX(-50%)",
+              width: "12px",
+              height: "12px",
+              backgroundColor: NODE_CONFIG.colors.parentConnection,
             }}
           />
           <Handle
@@ -47,6 +68,9 @@ const CustomNode = ({ data }) => {
               top: "-8px",
               left: "50%",
               transform: "translateX(-50%)",
+              width: "12px",
+              height: "12px",
+              backgroundColor: NODE_CONFIG.colors.parentConnection,
             }}
           />
           <Handle
@@ -54,21 +78,24 @@ const CustomNode = ({ data }) => {
             position={data.subtopicSide === "left" ? Position.Left : Position.Right}
             id="subtopic"
             style={{
-              [data.subtopicSide === "left" ? "left" : "right"]: "-8px",
-              top: "30%",
-              backgroundColor: "#ff686b",
+              [data.subtopicSide === "left" ? "left" : "right"]: "-10px",
+              top: "35%",
+              backgroundColor: NODE_CONFIG.colors.subtopicConnection,
+              width: "10px",
+              height: "10px",
             }}
           />
         </>
       ) : (
-        // Subtopic node handle
         <Handle
           type="target"
           position={data.side === "right" ? Position.Left : Position.Right}
           style={{
-            [data.side === "right" ? "left" : "right"]: "-8px",
-            top: "30%",
-            backgroundColor: "#ff686b",
+            [data.side === "right" ? "left" : "right"]: "-10px",
+            top: "35%",
+            backgroundColor: NODE_CONFIG.colors.subtopicConnection,
+            width: "10px",
+            height: "10px",
           }}
         />
       )}
@@ -81,131 +108,292 @@ const nodeTypes = { custom: CustomNode };
 const MindMap = () => {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+  const [language, setLanguage] = useState(""); 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Define parent nodes with adjusted y positions for more vertical space
-    const parentNodes = [
-      { id: "internet", label: "Internet", x: 400, y: 50, isParent: true, subtopicSide: "left" },
-      { id: "languages", label: "Programming Languages", x: 400, y: 200, isParent: true, subtopicSide: "right" },
-      { id: "databases", label: "Databases", x: 400, y: 350, isParent: true, subtopicSide: "right" },
-      { id: "webDevelopment", label: "Web Development", x: 400, y: 500, isParent: true, subtopicSide: "left" },
-      { id: "dataScience", label: "Data Science", x: 400, y: 650, isParent: true, subtopicSide: "right" },
-    ];
+    const fetchDataAndCreateLayout = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/initroadmap');
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        const topics = data["Topics to be covered"];
 
-    // Define subtopics for each parent node
-    const subtopics = {
-      internet: [
-        { label: "How does the internet work?", url: "https://developer.mozilla.org/en-US/docs/Web" },
-        { label: "What is HTTP?", url: "https://developer.mozilla.org/en-US/docs/Web/HTTP" },
-      ],
-      languages: [
-        { label: "JavaScript", url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript" },
-        { label: "Python", url: "https://docs.python.org/3/tutorial/index.html" },
-      ],
-      databases: [
-        { label: "SQL", url: "https://www.w3schools.com/sql/" },
-        { label: "NoSQL", url: "https://www.mongodb.com/nosql-explained" },
-      ],
-      webDevelopment: [
-        { label: "HTML", url: "https://developer.mozilla.org/en-US/docs/Web/HTML" },
-        { label: "CSS", url: "https://developer.mozilla.org/en-US/docs/Web/CSS" },
-        { label: "JavaScript for Web", url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction" },
-      ],
-      dataScience: [
-        { label: "Machine Learning", url: "https://www.coursera.org/learn/machine-learning" },
-        { label: "Data Analysis", url: "https://www.datacamp.com/courses/intro-to-data-analysis-with-python" },
-        { label: "Data Visualization", url: "https://www.datacamp.com/courses/introduction-to-data-visualization-with-python" },
-      ],
+        // Create parent nodes structure
+        const parentNodes = Object.keys(topics).map((topicName, index) => ({
+          id: topicName.replace(/\s+/g, '').toLowerCase(),
+          label: topicName,
+          subtopicSide: index % 2 === 0 ? 'left' : 'right'
+        }));
+
+        // Create subtopics structure
+        const subtopics = {};
+        Object.entries(topics).forEach(([topicName, topicData]) => {
+          const parentId = topicName.replace(/\s+/g, '').toLowerCase();
+          subtopics[parentId] = topicData["not done"].map(subtopic => ({
+            label: subtopic,
+            url: "" // Add URL mapping logic here if needed
+          }));
+        });
+
+        // Calculate layout positions
+        const centerX = window.innerWidth / 2;
+        let currentY = 80;
+        
+        const positionedParents = parentNodes.map(parent => {
+          const subtopicCount = subtopics[parent.id].length;
+          const requiredHeight = Math.max(
+            NODE_CONFIG.parent.verticalSpacing,
+            subtopicCount * NODE_CONFIG.subtopic.verticalSpacing
+          );
+
+          const node = {
+            ...parent,
+            x: centerX,
+            y: currentY,
+            requiredHeight,
+          };
+
+          currentY += requiredHeight + NODE_CONFIG.parent.verticalSpacing;
+          return node;
+        });
+
+        // Generate nodes and edges
+        const newNodes = [];
+        const newEdges = [];
+
+        positionedParents.forEach((parent, index) => {
+          // Add parent node
+          newNodes.push({
+            id: parent.id,
+            type: "custom",
+            position: { x: parent.x, y: parent.y },
+            data: {
+              label: parent.label,
+              isParent: true,
+              subtopicSide: parent.subtopicSide,
+            },
+            draggable: false,
+          });
+
+          // Connect parent nodes
+          if (index < positionedParents.length - 1) {
+            newEdges.push({
+              id: `parent-edge-${parent.id}-${positionedParents[index + 1].id}`,
+              source: parent.id,
+              target: positionedParents[index + 1].id,
+              sourceHandle: "bottom",
+              targetHandle: "top",
+              type: "smoothstep",
+              animated: true,
+              style: {
+                strokeWidth: 2.5,
+                stroke: NODE_CONFIG.colors.parentConnection,
+              },
+            });
+          }
+
+          // Add subtopics
+          const subtopicCount = subtopics[parent.id].length;
+          const startY = parent.y + (NODE_CONFIG.parent.verticalSpacing / 2) - 
+                        ((subtopicCount - 1) * NODE_CONFIG.subtopic.verticalSpacing) / 2;
+
+          subtopics[parent.id].forEach((subtopic, subIndex) => {
+            const subId = `${parent.id}-sub-${subIndex}`;
+            const xOffset = parent.subtopicSide === "left" 
+              ? -NODE_CONFIG.subtopic.horizontalOffset 
+              : NODE_CONFIG.subtopic.horizontalOffset;
+
+            newNodes.push({
+              id: subId,
+              type: "custom",
+              position: { 
+                x: parent.x + xOffset, 
+                y: startY + (subIndex * NODE_CONFIG.subtopic.verticalSpacing)
+              },
+              data: {
+                label: subtopic.label,
+                url: subtopic.url,
+                side: parent.subtopicSide,
+              },
+            });
+
+            newEdges.push({
+              id: `subtopic-edge-${parent.id}-${subId}`,
+              source: parent.id,
+              target: subId,
+              sourceHandle: "subtopic",
+              type: "smoothstep",
+              animated: true,
+              style: {
+                stroke: NODE_CONFIG.colors.subtopicConnection,
+                strokeWidth: 2,
+              },
+            });
+          });
+        });
+
+        setNodes(newNodes);
+        setEdges(newEdges);
+      } catch (error) {
+        console.error('Error fetching or processing data:', error);
+      }
     };
 
-    // Initialize nodes and edges
-    let newNodes = parentNodes.map((node) => ({
-      id: node.id,
-      type: "custom",
-      position: { x: node.x, y: node.y },
-      data: { label: node.label, isParent: true, subtopicSide: node.subtopicSide },
-      draggable: false,
-    }));
-
-    let newEdges = [];
-
-    // Add edges between parent nodes (adjusted for vertical spacing)
-    for (let i = 0; i < parentNodes.length - 1; i++) {
-      newEdges.push({
-        id: `edge-${parentNodes[i].id}-${parentNodes[i + 1].id}`,
-        source: parentNodes[i].id,
-        target: parentNodes[i + 1].id,
-        sourceHandle: "bottom",
-        targetHandle: "top",
-        type: "smoothstep",
-        animated: true,
-        style: { strokeWidth: 2 },
-      });
-    }
-
-    // Add subtopic nodes with adjusted vertical positioning
-    let parentYOffsets = {};
-    parentNodes.forEach((parent) => {
-      const numberOfSubtopics = subtopics[parent.id].length;
-      let verticalOffset = 0;
-
-      // Increase the distance between parent nodes further for subtopic positioning
-      verticalOffset = numberOfSubtopics * 70;  // Adjust for more vertical space between subtopics
-
-      parentYOffsets[parent.id] = verticalOffset;
-    });
-
-    // Add subtopics and edges from parent to subtopics
-    parentNodes.forEach((parent) => {
-      const numberOfSubtopics = subtopics[parent.id].length;
-
-      subtopics[parent.id].forEach((subtopic, index) => {
-        const subId = `${parent.id}-sub-${index}`;
-        const side = parent.subtopicSide;
-        const xOffset = side === "left" ? -250 : 250;  // Move subtopics left or right
-        const yPosition = parent.y + parentYOffsets[parent.id] + (index * 70);  // Adjust the vertical spacing for subtopics
-
-        // Add subtopic node
-        newNodes.push({
-          id: subId,
-          type: "custom",
-          position: { x: parent.x + xOffset, y: yPosition },
-          data: { label: subtopic.label, url: subtopic.url, side },
-        });
-
-        // Add edges from parent to subtopic
-        newEdges.push({
-          id: `edge-${parent.id}-${subId}`,
-          source: parent.id,
-          target: subId,
-          sourceHandle: "subtopic",
-          type: "smoothstep",
-          animated: true,
-          style: { stroke: "#ff686b", strokeWidth: 1.5 },
-        });
-      });
-    });
-
-    // Set the updated nodes and edges to state
-    setNodes(newNodes);
-    setEdges(newEdges);
-    fetch('http://localhost:8000/api/initroadmap')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log(data);
-    })
-    .catch(error => {
-      console.error('There was a problem with the fetch operation:', error);
-    });
-  
-    
+    fetchDataAndCreateLayout();
   }, []);
-
+  const handleLanguageSubmit = async (e) => {
+    e.preventDefault();
+    if (!language) return;
+  
+    setLoading(true);
+    setError(null);
+  
+    try {
+      const response = await fetch('http://localhost:8000/api/update-roadmap/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to update roadmap');
+  
+      const data = await response.json();
+  
+      if (!data["Topics to be covered"]) {
+        throw new Error('Missing "Topics to be covered" in response');
+      }
+  
+      const topics = data["Topics to be covered"];
+  
+      // Create parent nodes structure
+      const parentNodes = Object.keys(topics).map((topicName, index) => ({
+        id: topicName.replace(/\s+/g, '').toLowerCase(),
+        label: topicName,
+        subtopicSide: index % 2 === 0 ? 'left' : 'right'
+      }));
+  
+      // Create subtopics structure
+      const subtopics = {};
+      Object.entries(topics).forEach(([topicName, topicData]) => {
+        const parentId = topicName.replace(/\s+/g, '').toLowerCase();
+        subtopics[parentId] = topicData["not done"].map(subtopic => ({
+          label: subtopic,
+          url: "" // Add URL mapping logic if needed
+        }));
+      });
+  
+      // Calculate layout positions
+      const centerX = window.innerWidth / 2;
+      let currentY = 80;
+  
+      const positionedParents = parentNodes.map(parent => {
+        const subtopicCount = subtopics[parent.id].length;
+        const requiredHeight = Math.max(
+          NODE_CONFIG.parent.verticalSpacing,
+          subtopicCount * NODE_CONFIG.subtopic.verticalSpacing
+        );
+  
+        const node = {
+          ...parent,
+          x: centerX,
+          y: currentY,
+          requiredHeight,
+        };
+  
+        currentY += requiredHeight + NODE_CONFIG.parent.verticalSpacing;
+        return node;
+      });
+  
+      // Generate nodes and edges
+      const newNodes = [];
+      const newEdges = [];
+  
+      positionedParents.forEach((parent, index) => {
+        // Add parent node
+        newNodes.push({
+          id: parent.id,
+          type: "custom",
+          position: { x: parent.x, y: parent.y },
+          data: {
+            label: parent.label,
+            isParent: true,
+            subtopicSide: parent.subtopicSide,
+          },
+          draggable: false,
+        });
+  
+        // Connect parent nodes
+        if (index < positionedParents.length - 1) {
+          newEdges.push({
+            id: `parent-edge-${parent.id}-${positionedParents[index + 1].id}`,
+            source: parent.id,
+            target: positionedParents[index + 1].id,
+            sourceHandle: "bottom",
+            targetHandle: "top",
+            type: "smoothstep",
+            animated: true,
+            style: {
+              strokeWidth: 2.5,
+              stroke: NODE_CONFIG.colors.parentConnection,
+            },
+          });
+        }
+  
+        // Add subtopics
+        const subtopicCount = subtopics[parent.id].length;
+        const startY = parent.y + (NODE_CONFIG.parent.verticalSpacing / 2) - 
+                      ((subtopicCount - 1) * NODE_CONFIG.subtopic.verticalSpacing) / 2;
+  
+        subtopics[parent.id].forEach((subtopic, subIndex) => {
+          const subId = `${parent.id}-sub-${subIndex}`;
+          const xOffset = parent.subtopicSide === "left" 
+            ? -NODE_CONFIG.subtopic.horizontalOffset 
+            : NODE_CONFIG.subtopic.horizontalOffset;
+  
+          newNodes.push({
+            id: subId,
+            type: "custom",
+            position: { 
+              x: parent.x + xOffset, 
+              y: startY + (subIndex * NODE_CONFIG.subtopic.verticalSpacing)
+            },
+            data: {
+              label: subtopic.label,
+              url: subtopic.url,
+              side: parent.subtopicSide,
+            },
+          });
+  
+          newEdges.push({
+            id: `subtopic-edge-${parent.id}-${subId}`,
+            source: parent.id,
+            target: subId,
+            sourceHandle: "subtopic",
+            type: "smoothstep",
+            animated: true,
+            style: {
+              stroke: NODE_CONFIG.colors.subtopicConnection,
+              strokeWidth: 2,
+            },
+          });
+        });
+      });
+  
+      // Update state with new nodes and edges
+      setNodes(newNodes);
+      setEdges(newEdges);
+  
+    } catch (error) {
+      console.error('Error:', error);
+      setError("An error occurred while updating the roadmap.");
+    } finally {
+      setLoading(false);
+    }
+  }; 
+  
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -213,14 +401,87 @@ const MindMap = () => {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        connectionRadius={30}
+        fitViewOptions={{ padding: 0.2 }}
         nodesDraggable={false}
+        connectionRadius={20}
       >
-        <Controls />
-        <Background color="#f0f0f0" gap={30} />
+        <Controls showInteractive={false} />
+        <Background
+          color="#e0e0e0"
+          gap={40}
+          variant="dots"
+          size={1}
+        />
       </ReactFlow>
+  
+      {/* Fixed input component at the bottom */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "80%",
+          maxWidth: "400px",
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: "white",
+          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+          padding: "10px",
+          borderRadius: "25px",
+          zIndex: 10,
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Enter language"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "8px",
+            borderRadius: "20px",
+            border: "1px solid #ccc",
+            marginRight: "10px",
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={handleLanguageSubmit}
+          disabled={loading}
+          style={{
+            padding: "8px 15px",
+            borderRadius: "20px",
+            backgroundColor: "#3498db",
+            color: "white",
+            border: "none",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Submitting..." : "Submit"}
+        </button>
+      </div>
+  
+      {/* Error Display (Optional) */}
+      {error && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "80px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "10px",
+            backgroundColor: "#e74c3c",
+            color: "white",
+            borderRadius: "5px",
+            zIndex: 10,
+          }}
+        >
+          {error}
+        </div>
+      )}
     </ReactFlowProvider>
-  );
+  );  
 };
 
 export default MindMap;
