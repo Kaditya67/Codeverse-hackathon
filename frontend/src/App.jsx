@@ -1,23 +1,16 @@
-import { useEffect, useState } from "react";
+import React from "react";
+import { ChakraProvider, Box, Heading } from "@chakra-ui/react";
+import FlowChart from "./components/FlowChart";
 
-function App() {
-    const [data, setData] = useState(null);
-
-    useEffect(() => {
-        fetch("/api/chatbot/")
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                setData(data.message)
-            });
-    }, []);
-
-    return (
-        <div>
-            <h1>React + Vite + Django</h1>
-            <p>{data ? data : "Loading..."}</p>
-        </div>
-    );
-}
+const App = () => {
+  return (
+    <ChakraProvider>
+      <Box textAlign="center" p={5}>
+        <Heading>React Flow - Hierarchical Nodes</Heading>
+      </Box>
+      <FlowChart />
+    </ChakraProvider>
+  );
+};
 
 export default App;
