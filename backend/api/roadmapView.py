@@ -72,8 +72,6 @@ def generatecontent(language, roadmap_requirements):
 
     try:
         jsonfile = json.dumps(response_dict)
-        #print(jsonfile)
-        #print(type(python_object))
 
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
@@ -82,14 +80,6 @@ def generatecontent(language, roadmap_requirements):
     return jsonfile
 
 def roadmap(request):
-    # language = "python"
-    # roadmap_requirements = ["Topics to be covered", "Resources", "Self learning projects", "Main Roadmap"]
-    # response, status_code = generatecontent(language, roadmap_requirements)
-
-    # if status_code != 200:
-    #     return JsonResponse(response, status=status_code)
-
-    # return JsonResponse(response)
     language = "python"
     roadmap_requirements = ["Topics to be covered"]
 
