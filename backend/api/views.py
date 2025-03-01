@@ -10,7 +10,7 @@ def seperate(text):
     # Remove unnecessary newlines and excessive spaces
     text = text.replace("\n", "").strip()
 
-    topic_segregation = text.split("//")
+    topic_segregation = text.split(".")
 
     for topic in topic_segregation:
         temp = topic.split(">")
@@ -29,7 +29,7 @@ def seperate(text):
 
 def generatefromPrompt(prompt, model, context):
 
-    main_prompt = "No generation of conclusion or introduction by yourself just pure text!! Do not generate any questions for user!! Generate the response in following format: Main Topic > All possible subtopics in format st1, st2,..,sn//.Each main topic should be on the next line" 
+    main_prompt = "No generation of conclusion or introduction by yourself just pure text!! Do not generate any questions for user!! Generate the response in following format: Main Topic > All possible subtopics in format st1, st2,..,sn. Each main topic should be on the next line" 
 
     prompt = prompt + ".\n The previous context is: \n" + context
     try:
