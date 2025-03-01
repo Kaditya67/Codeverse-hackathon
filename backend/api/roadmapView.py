@@ -4,7 +4,7 @@ from google import generativeai
 import json
 from .models import Roadmap, Topic, SubTopic
 
-def separate(text): 
+def separate(text, topic_limit): 
     new_dict = {}
 
     # Remove unnecessary newlines and excessive spaces
@@ -12,14 +12,14 @@ def separate(text):
 
     topic_segregation = text.split(".")
 
-    for topic in topic_segregation:
+    for topic in topic_segregation[:topic_limit]:  # Limit topics
         temp = topic.split(">")
 
         if len(temp) < 2:
             continue
 
         main_topic = temp[0].strip()  # Clean the topic name
-        subtopics = [st.strip() for st in temp[1].split(",")]  # Clean each subtopic
+        subtopics = [st.strip() for st in temp[1].split(",")]  # Allow unlimited subtopics
 
         new_dict[main_topic] = {
             "not done": subtopics,
@@ -29,27 +29,26 @@ def separate(text):
 
     return new_dict
 
-def generate_from_prompt(prompt, model, context):
+def generate_from_prompt(prompt, model, context, topic_limit):
     main_prompt = (
-        "No generation of conclusion or introduction by yourself, just pure text!! "
-        "Do not generate any questions for the user!! "
-        "Generate the response in the following format: Main Topic > All possible subtopics in format st1, st2,..,sn. "
-        "Each main topic should be on the next line"
+        "Generate response in the format: Main Topic > Subtopic1, Subtopic2,... "
+        f"Limit the number of topics to {topic_limit} but allow any number of subtopics."
     ) 
 
-    prompt = f"{prompt}.\n The previous context is:\n{context}"
+    full_prompt = f"{prompt}.\nPrevious context:\n{context}\n{main_prompt}"
+    
     try:
-        response = model.generate_content(prompt + "\n" + main_prompt)
+        response = model.generate_content(full_prompt)
         return response.text.strip() if response.text else ""
     except Exception as e:
         print(f"Error generating response: {e}")
         return ""
 
-def generate_content(language, roadmap_requirements):
+def generate_content(language, roadmap_requirements, topic_limit):
     api_key = settings.GEMINI_API_KEY
 
     if not api_key:
-        return {"error": "Gemini API key not found in settings."}, 500
+        return JsonResponse({"error": "Gemini API key not found in settings."}, status=500)
 
     generativeai.configure(api_key=api_key)
     model = generativeai.GenerativeModel('gemini-2.0-flash')
@@ -57,24 +56,16 @@ def generate_content(language, roadmap_requirements):
     context = ""
 
     for content in roadmap_requirements:
-        prompt = f"Generate {content} for {language} in points"
-        new_response = generate_from_prompt(prompt, model, context)
+        prompt = f"Generate {content} for {language}"
+        new_response = generate_from_prompt(prompt, model, context, topic_limit)
 
         new_response = new_response.replace("*", "")
 
-        if len(new_response) > 80:
-            summary_prompt = f"Summarize the following text: {new_response} in 100 words"
-            summary = generate_from_prompt(summary_prompt, model, context)
-    
-            if summary:
-                context += f"For {content}, summarized context response is: {summary}\n"
-                new_response = summary
-        
         if not new_response:
             print(f"Skipping {content} due to empty response from API.")
             continue
         
-        ndict = separate(new_response)
+        ndict = separate(new_response, topic_limit)
         response_dict[content] = ndict  
 
     return json.dumps(response_dict)  # Ensure JSON format
@@ -82,26 +73,32 @@ def generate_content(language, roadmap_requirements):
 def roadmap(request):
     language = "python"
     roadmap_requirements = ["Topics to be covered"]
+    topic_limit = 10  # Limit topics but allow unlimited subtopics
 
-    # Create or update the Roadmap object
     roadmap, _ = Roadmap.objects.update_or_create(
         language=language,
         defaults={"roadmap_requirements": ", ".join(roadmap_requirements)}
     )
 
-    Jsonf = generate_content(language, roadmap_requirements)
+    Jsonf = generate_content(language, roadmap_requirements, topic_limit)
     Jsonf = json.loads(Jsonf)  # Convert JSON string to a dictionary
 
     topics_data = Jsonf.get(roadmap_requirements[0], {})
 
+    existing_topics = {topic.name: topic for topic in Topic.objects.filter(roadmap=roadmap)}
+
     for topic_name, details in topics_data.items():
         print(f"Processing Topic: {topic_name}")
 
-        # Create or update the Topic
+        # Update if exists, otherwise create
         topic, _ = Topic.objects.update_or_create(
             name=topic_name,
-            roadmap=roadmap
+            roadmap=roadmap,
+            defaults={}  # No additional fields for now
         )
+
+        # Remove the topic from the existing list (so we know what is stale)
+        existing_topics.pop(topic_name, None)
 
         # Function to update or create subtopics
         def update_or_create_subtopics(subtopic_list, status):
@@ -118,5 +115,9 @@ def roadmap(request):
         update_or_create_subtopics(details["not interested"], "not_interested")
         
         print("-" * 30)  # Separator for clarity
+
+    # Delete stale topics that were not in the new roadmap
+    for stale_topic in existing_topics.values():
+        stale_topic.delete()
         
     return JsonResponse(Jsonf, safe=False)
