@@ -75,21 +75,6 @@ def generate_content(language, roadmap_requirements, topic_limit):
 
     return json.dumps(response_dict)  # Return the JSON as string
 
-# Update roadmap function
-def update_roadmap(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            language = data.get('language')
-            if not language:
-                return JsonResponse({"error": "Language is required"}, status=400)
-
-            # Call the roadmap function and return the updated data
-            return roadmap(request, language)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON format"}, status=400)
-        except Exception as e:
-            return JsonResponse({"error": f"Failed to update roadmap: {str(e)}"}, status=500)
 
 # Roadmap generation and database update
 def roadmap(request, language="django"):
@@ -149,3 +134,20 @@ def roadmap(request, language="django"):
 
     except Exception as e:
         return JsonResponse({"error": f"Failed to generate or process roadmap: {str(e)}"}, status=500)
+
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+def update_roadmap(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            language = data.get('language')
+            if not language:
+                return JsonResponse({"error": "Language is required"}, status=400)
+
+            # Call the roadmap function and return the updated data
+            return roadmap(request, language)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to update roadmap: {str(e)}"}, status=500)

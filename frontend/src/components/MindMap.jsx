@@ -260,49 +260,52 @@ const MindMap = () => {
     setError(null);
   
     try {
-      // Correct axios request structure
+      // Axios request
       const response = await axios.post(
         'http://localhost:8000/api/update-roadmap/',
-        { language },  // Data object
-        {  // Config object
-          headers: { 
+        { language },
+        {
+          headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.cookie.replace(/(?:(?:^|.*;\s*)csrftoken\s*=\s*([^;]*).*$)|^.*$/, '$1'),
+            'X-CSRFToken': document.cookie.replace(
+              /(?:(?:^|.*;\s*)csrftoken\s*=\s*([^;]*).*$)|^.*$/,
+              '$1'
+            ),
           },
-          withCredentials: true
         }
       );
   
-      // Process response data
+      // Ensure response data contains expected structure
       const data = response.data;
-  
+      console.log("Data:", data);
       if (!data["Topics to be covered"]) {
         throw new Error('Missing "Topics to be covered" in response');
       }
   
+      // Define topics structure from response
+      const topics = data["Topics to be covered"];
   
-      // Create parent nodes structure
+      // Generate nodes and edges based on topics and subtopics
       const parentNodes = Object.keys(topics).map((topicName, index) => ({
         id: topicName.replace(/\s+/g, '').toLowerCase(),
         label: topicName,
-        subtopicSide: index % 2 === 0 ? 'left' : 'right'
+        subtopicSide: index % 2 === 0 ? 'left' : 'right',
       }));
   
-      // Create subtopics structure
       const subtopics = {};
       Object.entries(topics).forEach(([topicName, topicData]) => {
         const parentId = topicName.replace(/\s+/g, '').toLowerCase();
-        subtopics[parentId] = topicData["not done"].map(subtopic => ({
+        subtopics[parentId] = topicData["not done"].map((subtopic) => ({
           label: subtopic,
-          url: "" // Add URL mapping logic if needed
+          url: "", // Add URL mapping logic if needed
         }));
       });
   
-      // Calculate layout positions
+      // Positioning logic
       const centerX = window.innerWidth / 2;
       let currentY = 80;
   
-      const positionedParents = parentNodes.map(parent => {
+      const positionedParents = parentNodes.map((parent) => {
         const subtopicCount = subtopics[parent.id].length;
         const requiredHeight = Math.max(
           NODE_CONFIG.parent.verticalSpacing,
@@ -320,12 +323,11 @@ const MindMap = () => {
         return node;
       });
   
-      // Generate nodes and edges
+      // Create nodes and edges for the flowchart
       const newNodes = [];
       const newEdges = [];
   
       positionedParents.forEach((parent, index) => {
-        // Add parent node
         newNodes.push({
           id: parent.id,
           type: "custom",
@@ -357,22 +359,22 @@ const MindMap = () => {
   
         // Add subtopics
         const subtopicCount = subtopics[parent.id].length;
-        const startY = parent.y + (NODE_CONFIG.parent.verticalSpacing / 2) - 
-                      ((subtopicCount - 1) * NODE_CONFIG.subtopic.verticalSpacing) / 2;
+        const startY =
+          parent.y +
+          NODE_CONFIG.parent.verticalSpacing / 2 -
+          (subtopicCount - 1) * NODE_CONFIG.subtopic.verticalSpacing / 2;
   
         subtopics[parent.id].forEach((subtopic, subIndex) => {
           const subId = `${parent.id}-sub-${subIndex}`;
-          const xOffset = parent.subtopicSide === "left" 
-            ? -NODE_CONFIG.subtopic.horizontalOffset 
-            : NODE_CONFIG.subtopic.horizontalOffset;
+          const xOffset =
+            parent.subtopicSide === "left"
+              ? -NODE_CONFIG.subtopic.horizontalOffset
+              : NODE_CONFIG.subtopic.horizontalOffset;
   
           newNodes.push({
             id: subId,
             type: "custom",
-            position: { 
-              x: parent.x + xOffset, 
-              y: startY + (subIndex * NODE_CONFIG.subtopic.verticalSpacing)
-            },
+            position: { x: parent.x + xOffset, y: startY + subIndex * NODE_CONFIG.subtopic.verticalSpacing },
             data: {
               label: subtopic.label,
               url: subtopic.url,
@@ -395,17 +397,18 @@ const MindMap = () => {
         });
       });
   
-      // Update state with new nodes and edges
+      // Update state
       setNodes(newNodes);
       setEdges(newEdges);
   
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       setError("An error occurred while updating the roadmap.");
     } finally {
       setLoading(false);
     }
-  }; 
+  };
+  
   
   return (
     <ReactFlowProvider>

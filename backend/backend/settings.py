@@ -44,23 +44,59 @@ INSTALLED_APPS = [
 
 INSTALLED_APPS += ['corsheaders']
 
+# settings.py
+
+# Security middleware should stay first
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware should be here
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-  
 ]
 
-
-MIDDLEWARE.insert(1, 'corsheaders.middleware.CorsMiddleware')
-
+# CORS Configuration (add/update these)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Allow Vite dev server
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_ALLOW_CREDENTIALS = True
+
+# Session/Cookie settings for CSRF
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False  # To allow JavaScript to read CSRF token
+SESSION_COOKIE_HTTPONLY = True
+
+# Only if you're using HTTPS in development (not recommended)
+CSRF_COOKIE_SECURE = False  
+SESSION_COOKIE_SECURE = False
 
 CSRF_TRUSTED_ORIGINS = ['http://localhost:5173']
 
