@@ -9,11 +9,12 @@ from google import generativeai
 def get_summary(request):
     """Handle summary requests without code generation"""
     if request.method == 'POST':
+        print("Received POST request", request.body)
         try:
             # Parse and validate request data
             data = json.loads(request.body)
             language = data.get('language', '').strip()
-            subtopic = data.get('subtopic', '').strip()
+            subtopic = data.get('topic', '').strip()
             
             if not language or not subtopic:
                 return JsonResponse(
@@ -72,7 +73,7 @@ def generate_from_prompt(model, prompt, type_res="medium"):
         "medium": 100,
         "long": 150
     }
-    word_limit = length_map.get(type_res, 100)
+    word_limit = length_map.get(type_res, 50)
     
     try:
         response = model.generate_content(

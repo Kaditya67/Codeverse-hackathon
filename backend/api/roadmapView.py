@@ -82,11 +82,16 @@ def roadmap(request, language="django"):
     topic_limit = 10  # Limit topics but allow unlimited subtopics
 
     try:
+        Roadmap.objects.all().delete()
         # Ensure the roadmap is updated or created
         roadmap, _ = Roadmap.objects.update_or_create(
             language=language,
             defaults={"roadmap_requirements": ", ".join(roadmap_requirements)}
         )
+
+        # Clear all data in Topic and SubTopic tables
+        Topic.objects.all().delete()
+        SubTopic.objects.all().delete()
 
         # Generate content from the model
         Jsonf = generate_content(language, roadmap_requirements, topic_limit)

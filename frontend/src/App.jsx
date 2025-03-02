@@ -5,6 +5,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import FlowChart from "./components/FlowChart";
 import LandingPage from "./components/LandingPage";
+import ChatBot from "./components/ChatBot";
 
 const App = () => {
   return (
@@ -14,6 +15,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/flowchart" element={<FlowChart />} />
+            <Route path="/learn" element={<ChatBot />} />
           </Routes>
         </Router>
       </DndProvider>
