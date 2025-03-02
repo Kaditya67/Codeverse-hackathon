@@ -2,7 +2,7 @@ import json
 from django.http import JsonResponse
 from django.conf import settings
 from google import generativeai
-from .models import Roadmap, Topic, SubTopic
+from .models import Roadmap, Topic, SubTopic, Notes
 
 # Separate topics into categories
 def separate(text, topic_limit): 
@@ -120,7 +120,14 @@ def roadmap(request, language="django"):
                     SubTopic.objects.update_or_create(
                         name=subtopic_name,
                         topic=topic,
-                        defaults={"status": status}  # Update status
+                        defaults={"status": status}
+                            # Update status
+                    )
+
+                    Notes.objects.update_or_create(
+                        notes="",
+                        subtopic = subtopic_name
+                            # Update status
                     )
 
             # Store subtopics in their respective categories
