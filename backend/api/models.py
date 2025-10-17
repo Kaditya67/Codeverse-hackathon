@@ -29,3 +29,7 @@ class SubTopic(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.status} ({self.topic.name})"
+
+class Notes(models.Model):
+    notes = models.CharField(max_length=1000)
+    subtopic = models.ForeignKey(SubTopic, on_delete=models.CASCADE, related_name="notes")
