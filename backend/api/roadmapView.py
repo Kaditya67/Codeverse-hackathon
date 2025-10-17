@@ -129,7 +129,11 @@ def roadmap(request, language="django"):
             update_or_create_subtopics(details["not interested"], "not_interested")
             
             print("-" * 30)  # Separator for clarity
-
+            
+            # Add total topics to the Topic field and Completed Topic field
+            topic.total_topics = len(details["not done"]) + len(details["interested"]) + len(details["not interested"])
+            topic.completed_topics = len(details["not done"]) + len(details["interested"])
+            topic.save()
         # Delete stale topics that were not in the new roadmap
         for stale_topic in existing_topics.values():
             stale_topic.delete()

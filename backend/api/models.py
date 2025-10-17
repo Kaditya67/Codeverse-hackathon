@@ -9,6 +9,8 @@ class Roadmap(models.Model):
 
 class Topic(models.Model):
     name = models.CharField(max_length=255, unique=True)  # Topic Name (e.g., "Python Basics")
+    total_topics = models.IntegerField(default=0)
+    completed_topics = models.IntegerField(default=0)
     roadmap = models.ForeignKey(Roadmap, on_delete=models.CASCADE, related_name="topics", null=True, blank=True)  
 
     def __str__(self):
